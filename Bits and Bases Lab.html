@@ -1,0 +1,425 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Bits and Bases Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: lab bench — a header with a live 8-bit register, tabbed workbenches below, one column on phones */
+:root{
+  --paper:#eef2f3; --surface:#ffffff; --ink:#14232b; --muted:#56666d; --line:#cfd9dc;
+  --accent:#1f4fd1; --accent-soft:#e3eafc; --led:#e39a0c; --led-off:#dfe5e7;
+  --good:#1d7a4a; --good-soft:#e2f3ea; --bad:#b3261e; --bad-soft:#fbe7e5;
+  --display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#0e161a; --surface:#152127; --ink:#e2ebee; --muted:#93a5ab; --line:#26363d;
+  --accent:#86a8ff; --accent-soft:#1c2a4d; --led:#ffbe3d; --led-off:#22323a;
+  --good:#5fd39a; --good-soft:#143326; --bad:#ff8a80; --bad-soft:#3a1a18; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#0e161a; --surface:#152127; --ink:#e2ebee; --muted:#93a5ab; --line:#26363d;
+  --accent:#86a8ff; --accent-soft:#1c2a4d; --led:#ffbe3d; --led-off:#22323a;
+  --good:#5fd39a; --good-soft:#143326; --bad:#ff8a80; --bad-soft:#3a1a18; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font:15px/1.55 var(--body);
+  padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px));padding-block:0 48px}
+.wrap{max-width:980px;margin:0 auto}
+header{padding-block:28px 18px;display:grid;grid-template-columns:1fr auto;gap:20px;align-items:end}
+.eyebrow{font:500 12px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1{font:800 clamp(30px,6vw,46px)/1.02 var(--display);margin:8px 0 6px;text-wrap:balance;letter-spacing:-.01em}
+.lede{margin:0;color:var(--muted);max-width:56ch}
+.reg{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.reg .bits{display:flex;gap:5px}
+.reg .bit{width:24px;height:30px;border-radius:5px;display:grid;place-items:center;font:600 13px var(--mono);background:var(--led-off);color:var(--muted)}
+.reg .bit.on{background:var(--led);color:#1b1300}
+.reg small{font:12px var(--mono);color:var(--muted)}
+nav{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:22px;overflow-x:auto}
+nav button{font:600 14px var(--body);color:var(--muted);background:none;border:0;padding:10px 14px;border-bottom:3px solid transparent;cursor:pointer;white-space:nowrap}
+nav button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+nav button:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h2{font:700 22px/1.2 var(--display);margin:0 0 4px}
+h3{font:600 15px/1.3 var(--body);margin:0 0 8px}
+.sub{color:var(--muted);margin:0 0 18px;max-width:65ch}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}
+@media (max-width:760px){.grid2{grid-template-columns:1fr} header{grid-template-columns:1fr} .reg{align-items:flex-start}}
+.stack{display:flex;flex-direction:column;gap:18px}
+label{font:500 12px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.row>div{min-width:0}
+input[type=text],select,textarea{font:500 18px var(--mono);color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:9px 11px;width:100%}
+textarea{font-size:16px;resize:vertical;min-height:70px}
+select{font-size:15px;font-family:var(--body)}
+.btn{font:600 14px var(--body);border-radius:8px;padding:10px 16px;cursor:pointer;border:1px solid var(--accent);background:var(--accent);color:var(--surface)}
+.btn.ghost{background:transparent;color:var(--accent)}
+.err{color:var(--bad);font-size:13px;margin-top:6px;min-height:1em}
+.outs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:560px){.outs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.out{border:1px solid var(--line);border-radius:8px;padding:10px 12px;min-width:0;cursor:pointer;background:var(--surface);text-align:left;color:var(--ink)}
+.out[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.out span{display:block;font:500 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.out b{display:block;font:600 17px var(--mono);word-break:break-all;margin-top:3px}
+.bitrow{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.bitbtn{width:34px;border:1px solid var(--line);background:var(--led-off);color:var(--muted);border-radius:6px;padding:4px 0 3px;cursor:pointer;font:600 15px var(--mono);display:flex;flex-direction:column;align-items:center}
+.bitbtn.on{background:var(--led);border-color:var(--led);color:#1b1300}
+.bitbtn small{font:500 9px var(--mono);opacity:.75}
+.bitbtn.gap{margin-left:8px}
+.steps{font-size:14px}
+.steps .method{display:inline-block;font:600 12px var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);padding:3px 8px;border-radius:4px;margin-bottom:10px}
+.tblwrap{overflow-x:auto}
+table{border-collapse:collapse;font:14px var(--mono);font-variant-numeric:tabular-nums;width:100%}
+th{font:500 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:left;padding:6px 10px;border-bottom:1px solid var(--line)}
+td{padding:6px 10px;border-bottom:1px solid var(--line)}
+td.hl{color:var(--led);font-weight:600}
+:root td.hl{color:var(--accent)}
+.result{margin-top:10px;font:600 16px var(--mono)}
+.groups{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0}
+.grp{border:1px solid var(--line);border-radius:6px;padding:6px 10px;text-align:center;font:600 16px var(--mono)}
+.grp em{display:block;font-style:normal;color:var(--accent);font-size:18px;border-top:1px dashed var(--line);margin-top:4px;padding-top:2px}
+.grp .pad{color:var(--muted);opacity:.6}
+.note{font-size:13px;color:var(--muted);margin:8px 0 0}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:500 13px var(--body);border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:6px 12px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+.qcard{font:600 clamp(20px,4vw,26px)/1.3 var(--mono);margin:6px 0 14px;word-break:break-all}
+.score{display:flex;gap:18px;font:13px var(--mono);color:var(--muted)}
+.score b{color:var(--ink);font-size:18px;display:block}
+.fb{border-radius:8px;padding:10px 12px;margin-top:12px;font-weight:500}
+.fb.good{background:var(--good-soft);color:var(--good)}
+.fb.bad{background:var(--bad-soft);color:var(--bad)}
+.tq{border-top:1px solid var(--line);padding-block:14px}
+.tq:first-child{border-top:0;padding-top:0}
+.tq h3 span{font-family:var(--mono);color:var(--accent);margin-right:6px}
+details{border:1px solid var(--line);border-radius:8px;margin-top:8px;background:var(--surface)}
+summary{cursor:pointer;padding:9px 12px;display:flex;justify-content:space-between;gap:12px;align-items:center;font:500 15px var(--mono)}
+summary::-webkit-details-marker{display:none}
+summary .reveal{font:600 12px var(--body);color:var(--accent);white-space:nowrap}
+details[open] summary .reveal{color:var(--muted)}
+details .body{padding:4px 12px 12px;min-width:0}
+.ans{font:600 15px var(--mono);color:var(--good)}
+.cheat td,.cheat th{padding:4px 8px}
+.bcd{display:flex;flex-wrap:wrap;gap:8px}
+.bcd .grp em{font-size:15px}
+@media (prefers-reduced-motion:no-preference){.bitbtn,.out,.chip{transition:background .12s,border-color .12s}}
+</style>
+
+<div class="wrap">
+<header>
+  <div>
+    <div class="eyebrow">HNDIT1032 · Computer and Network Systems · Week 02</div>
+    <h1>Bits and Bases Lab</h1>
+    <p class="lede">Convert between binary, octal, decimal and hexadecimal with the full working shown, encode BCD and ASCII, drill yourself, and check Tutorial 02.</p>
+  </div>
+  <div class="reg" aria-label="Example register showing 156 in binary">
+    <div class="bits" id="hdrBits"></div>
+    <small>156₁₀ = 10011100₂ = 234₈ = 9C₁₆</small>
+  </div>
+</header>
+
+<nav role="tablist">
+  <button role="tab" data-view="convert">Converter</button>
+  <button role="tab" data-view="codes">BCD and ASCII</button>
+  <button role="tab" data-view="practice">Practice</button>
+  <button role="tab" data-view="tutorial">Tutorial 02</button>
+  <button role="tab" data-view="cheat">Cheat sheet</button>
+</nav>
+
+<!-- CONVERTER -->
+<section id="v-convert" class="stack">
+  <div><h2>Number converter</h2><p class="sub">Type a number and pick its base. Tap a result card to see the step-by-step working for that conversion, or flip the bits directly.</p></div>
+  <div class="panel stack">
+    <div class="row">
+      <div style="flex:1 1 220px"><label for="cvIn">Number</label><input type="text" id="cvIn" value="156" autocomplete="off" spellcheck="false"></div>
+      <div style="flex:0 1 200px"><label for="cvBase">Its base</label>
+        <select id="cvBase"><option value="10" selected>Decimal (base 10)</option><option value="2">Binary (base 2)</option><option value="8">Octal (base 8)</option><option value="16">Hexadecimal (base 16)</option></select></div>
+    </div>
+    <div class="err" id="cvErr"></div>
+    <div class="outs" id="cvOuts"></div>
+    <div id="cvBitsWrap"><label>Bits (tap to flip, 16-bit view)</label><div class="bitrow" id="cvBits"></div></div>
+  </div>
+  <div class="panel steps" id="cvSteps"></div>
+</section>
+
+<!-- CODES -->
+<section id="v-codes" class="stack" hidden>
+  <div><h2>BCD and ASCII</h2><p class="sub">BCD codes each decimal digit in its own 4 bits. ASCII gives every character a 7-bit code; uppercase A is 65.</p></div>
+  <div class="grid2">
+    <div class="panel">
+      <h3>Decimal to BCD</h3>
+      <label for="bcdIn">Decimal number</label><input type="text" id="bcdIn" value="7093" autocomplete="off">
+      <div class="err" id="bcdErr"></div>
+      <div id="bcdOut"></div>
+    </div>
+    <div class="panel">
+      <h3>Text to ASCII</h3>
+      <label for="ascIn">Text</label><textarea id="ascIn" spellcheck="false">Hello, world</textarea>
+      <div id="ascOut" class="tblwrap" style="margin-top:12px"></div>
+    </div>
+  </div>
+</section>
+
+<!-- PRACTICE -->
+<section id="v-practice" class="stack" hidden>
+  <div><h2>Practice drill</h2><p class="sub">Pick the conversion types you want, answer, and check. Every answer comes with the full working so you can see where you went wrong.</p></div>
+  <div class="panel stack">
+    <div><label>Question types</label><div class="chips" id="pTypes"></div></div>
+    <div class="score"><div>Correct<b id="pOk">0</b></div><div>Attempted<b id="pAll">0</b></div><div>Streak<b id="pStreak">0</b></div></div>
+  </div>
+  <div class="panel">
+    <div class="eyebrow" id="pLabel"></div>
+    <div class="qcard" id="pQ"></div>
+    <form id="pForm" class="row">
+      <div style="flex:1 1 240px"><label for="pIn">Your answer</label><input type="text" id="pIn" autocomplete="off" spellcheck="false"></div>
+      <button class="btn" type="submit">Check</button>
+      <button class="btn ghost" type="button" id="pNext">Next question</button>
+    </form>
+    <div id="pFb"></div>
+    <div id="pSteps" class="steps" style="margin-top:14px"></div>
+  </div>
+</section>
+
+<!-- TUTORIAL -->
+<section id="v-tutorial" class="stack" hidden>
+  <div><h2>Tutorial 02 answers</h2><p class="sub">Work each one on paper first, then open it to check the answer and the working.</p></div>
+  <div class="panel" id="tutList"></div>
+</section>
+
+<!-- CHEAT -->
+<section id="v-cheat" class="stack" hidden>
+  <div><h2>Cheat sheet</h2><p class="sub">The two tables that unlock every binary, octal and hex question, plus the method for each direction.</p></div>
+  <div class="grid2">
+    <div class="panel tblwrap"><h3>0 to 15 in every base</h3><table class="cheat" id="cheat16"></table></div>
+    <div class="stack">
+      <div class="panel tblwrap"><h3>Which method?</h3><table class="cheat">
+        <tr><th>From → to</th><th>Method</th></tr>
+        <tr><td>Decimal → any</td><td>Divide by the base, read remainders bottom to top</td></tr>
+        <tr><td>Any → decimal</td><td>Digit × base<sup>position</sup>, add them up</td></tr>
+        <tr><td>Binary → octal/hex</td><td>Group 3 / 4 bits from the right</td></tr>
+        <tr><td>Octal/hex → binary</td><td>Each digit → 3 / 4 bits</td></tr>
+        <tr><td>Octal ↔ hex</td><td>Go through binary and regroup</td></tr>
+        <tr><td>Decimal → BCD</td><td>Each digit → 4 bits, separately</td></tr>
+      </table></div>
+      <div class="panel tblwrap"><h3>Data units</h3><table class="cheat">
+        <tr><th>Unit</th><th>Size</th></tr>
+        <tr><td>Nibble</td><td>4 bits</td></tr><tr><td>Byte</td><td>8 bits</td></tr>
+        <tr><td>Word</td><td>16 bits (course convention)</td></tr><tr><td>Double word</td><td>32 bits</td></tr>
+        <tr><td>KB / MB / GB</td><td>1024 B / 1024 KB / 1024 MB</td></tr>
+        <tr><td>ASCII · Ext. ASCII · Unicode</td><td>7 bits (128) · 8 bits (256) · 16 bits (65,536)</td></tr>
+      </table></div>
+    </div>
+  </div>
+</section>
+</div>
+
+<script>
+const DIG = '0123456789ABCDEF';
+const NAME = {2:'Binary',8:'Octal',10:'Decimal',16:'Hexadecimal'};
+const SUB = b => `<sub>${b}</sub>`;
+const $ = id => document.getElementById(id);
+const fmt = (n,b) => n.toString(b).toUpperCase();
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function valid(s,b){ s=s.trim().toUpperCase(); return s.length>0 && [...s].every(c=>{const i=DIG.indexOf(c); return i>=0 && i<b;}); }
+
+/* ---------- step builders ---------- */
+function stepsDivision(n,b){
+  if(n===0) return `<span class="method">Repeated division</span><p>0 is written 0 in every base.</p>`;
+  let rows='', q=n;
+  while(q>0){ const r=q%b, nq=Math.floor(q/b);
+    rows+=`<tr><td>${q} ÷ ${b}</td><td>${nq}</td><td class="hl">${r}${r>9?` (${DIG[r]})`:''}</td></tr>`; q=nq; }
+  return `<span class="method">Repeated division by ${b}</span>
+  <div class="tblwrap"><table><tr><th>Division</th><th>Quotient</th><th>Remainder</th></tr>${rows}</table></div>
+  <p class="note">Read the remainders from the bottom up.</p>
+  <div class="result">${n}${SUB(10)} = ${fmt(n,b)}${SUB(b)}</div>`;
+}
+function stepsWeights(s,b){
+  s=s.trim().toUpperCase(); const L=s.length; let rows='', parts=[], total=0;
+  [...s].forEach((c,i)=>{ const d=DIG.indexOf(c), p=L-1-i, w=Math.pow(b,p), pr=d*w; total+=pr;
+    rows+=`<tr><td>${c}${d>9?` (${d})`:''}</td><td>${b}<sup>${p}</sup> = ${w}</td><td class="hl">${pr}</td></tr>`;
+    if(pr) parts.push(pr); });
+  return `<span class="method">Positional weights</span>
+  <div class="tblwrap"><table><tr><th>Digit</th><th>Weight</th><th>Digit × weight</th></tr>${rows}</table></div>
+  <div class="result">${parts.length?parts.join(' + '):'0'} = ${total}${SUB(10)}</div>`;
+}
+function groupHTML(bin,size){
+  const pad=(size-bin.length%size)%size, p='0'.repeat(pad)+bin; let out='';
+  for(let i=0;i<p.length;i+=size){ const g=p.slice(i,i+size);
+    const shown = i===0&&pad ? `<span class="pad">${g.slice(0,pad)}</span>${g.slice(pad)}` : g;
+    out+=`<div class="grp">${shown}<em>${DIG[parseInt(g,2)]}</em></div>`; }
+  return {html:`<div class="groups">${out}</div>`, pad};
+}
+function stepsGroup(bin,b){
+  const size=b===8?3:4, g=groupHTML(bin,size), r=fmt(parseInt(bin,2),b);
+  return `<span class="method">Group ${size} bits from the right</span>${g.html}
+  ${g.pad?`<p class="note">Added ${g.pad} leading zero${g.pad>1?'s':''} (shown faded) to complete the leftmost group.</p>`:''}
+  <div class="result">${bin}${SUB(2)} = ${r}${SUB(b)}</div>`;
+}
+function expandHTML(s,b){
+  const size=b===8?3:4; return `<div class="groups">${[...s.toUpperCase()].map(c=>`<div class="grp">${c}<em>${DIG.indexOf(c).toString(2).padStart(size,'0')}</em></div>`).join('')}</div>`;
+}
+function stepsExpand(s,b){
+  s=s.trim().toUpperCase(); const size=b===8?3:4, bin=parseInt(s,b).toString(2);
+  return `<span class="method">Each ${b===8?'octal':'hex'} digit → ${size} bits</span>${expandHTML(s,b)}
+  <p class="note">Join the groups and drop any leading zeros.</p>
+  <div class="result">${s}${SUB(b)} = ${bin}${SUB(2)}</div>`;
+}
+function stepsVia(s,f,t){
+  s=s.trim().toUpperCase(); const bin=parseInt(s,f).toString(2), size=t===8?3:4;
+  return `<span class="method">Through binary</span>
+  <h3>1. ${NAME[f]} → binary (each digit → ${f===8?3:4} bits)</h3>${expandHTML(s,f)}
+  <h3 style="margin-top:12px">2. Regroup in ${size}s from the right</h3>${groupHTML(bin,size).html}
+  <div class="result">${s}${SUB(f)} = ${bin}${SUB(2)} = ${fmt(parseInt(s,f),t)}${SUB(t)}</div>`;
+}
+function steps(s,f,t){
+  s=s.trim().toUpperCase(); const n=parseInt(s,f);
+  if(f===t) return `<p>Same base, nothing to convert.</p>`;
+  if(f===10) return stepsDivision(n,t);
+  if(t===10) return stepsWeights(s,f);
+  if(f===2) return stepsGroup(s.replace(/^0+(?=.)/,''),t);
+  if(t===2) return stepsExpand(s,f);
+  return stepsVia(s,f,t);
+}
+function bcdOf(str){ return [...String(str)].map(c=>(+c).toString(2).padStart(4,'0')); }
+function stepsBCD(str){
+  const g=bcdOf(str);
+  return `<span class="method">Each digit → 4 bits</span><div class="groups">${[...String(str)].map((c,i)=>`<div class="grp">${c}<em>${g[i]}</em></div>`).join('')}</div>
+  <div class="result">${str}${SUB(10)} = ${g.join(' ')} (BCD)</div>
+  <p class="note">Compare pure binary: ${str}${SUB(10)} = ${(+str).toString(2)}${SUB(2)}. BCD and binary are different.</p>`;
+}
+function stepsASCII(w){
+  const rows=[...w].map(c=>{const d=c.charCodeAt(0);return `<tr><td>${esc(c)}</td><td>${d}</td><td>${fmt(d,16)}</td><td>${d.toString(2).padStart(7,'0')}</td></tr>`}).join('');
+  return `<span class="method">Count from A = 65</span><div class="tblwrap"><table><tr><th>Char</th><th>Decimal</th><th>Hex</th><th>7-bit binary</th></tr>${rows}</table></div>`;
+}
+
+/* ---------- header register ---------- */
+$('hdrBits').innerHTML=[...'10011100'].map(b=>`<div class="bit${b==='1'?' on':''}">${b}</div>`).join('');
+
+/* ---------- converter ---------- */
+let cvTarget=2;
+function renderConvert(){
+  const s=$('cvIn').value.trim(), f=+$('cvBase').value;
+  if(!valid(s,f)){
+    $('cvErr').textContent = s ? `"${s}" isn't a valid ${NAME[f].toLowerCase()} number. Allowed digits: ${DIG.slice(0,f).split('').join(', ')}.` : 'Type a number to convert.';
+    $('cvOuts').innerHTML=''; $('cvSteps').innerHTML=''; $('cvBitsWrap').hidden=true; return; }
+  const n=parseInt(s,f);
+  if(n>4294967295){ $('cvErr').textContent='Keep numbers under 4,294,967,296 (32 bits).'; return; }
+  $('cvErr').textContent='';
+  if(cvTarget===f) cvTarget = f===10?2:10;
+  $('cvOuts').innerHTML=[2,8,10,16].map(b=>`<button type="button" class="out" data-b="${b}" aria-pressed="${b===cvTarget}"><span>${NAME[b]} · base ${b}</span><b>${fmt(n,b)}</b></button>`).join('');
+  $('cvSteps').innerHTML = `<h3>${s.toUpperCase()}${SUB(f)} → ${NAME[cvTarget].toLowerCase()}</h3>` + steps(s,f,cvTarget);
+  const show=n<65536; $('cvBitsWrap').hidden=!show;
+  if(show){ let h=''; for(let i=15;i>=0;i--){ const on=(n>>i)&1;
+      h+=`<button type="button" class="bitbtn${on?' on':''}${i===7?' gap':''}" data-i="${i}" aria-label="bit ${i}, value ${1<<i}, currently ${on}">${on}<small>${1<<i}</small></button>`; }
+    $('cvBits').innerHTML=h; }
+}
+$('cvIn').addEventListener('input',renderConvert);
+$('cvBase').addEventListener('change',()=>{ renderConvert(); });
+$('cvOuts').addEventListener('click',e=>{const b=e.target.closest('.out'); if(!b)return; cvTarget=+b.dataset.b; if(cvTarget===+$('cvBase').value){ $('cvBase').value=String(cvTarget===10?2:10); } renderConvert();});
+$('cvBits').addEventListener('click',e=>{const b=e.target.closest('.bitbtn'); if(!b)return;
+  const f=+$('cvBase').value, n=parseInt($('cvIn').value.trim(),f)^(1<<+b.dataset.i); $('cvIn').value=fmt(n,f); renderConvert();});
+
+/* ---------- codes ---------- */
+function renderBCD(){
+  const s=$('bcdIn').value.trim();
+  if(!/^\d+$/.test(s)){ $('bcdErr').textContent='Use decimal digits 0 to 9 only.'; $('bcdOut').innerHTML=''; return; }
+  $('bcdErr').textContent=''; $('bcdOut').innerHTML='<div class="steps" style="margin-top:10px">'+stepsBCD(s.length>12?s.slice(0,12):s)+'</div>';
+}
+function renderASCII(){
+  const t=$('ascIn').value.slice(0,40);
+  if(!t){ $('ascOut').innerHTML='<p class="note">Type some text to see its codes.</p>'; return; }
+  const rows=[...t].map(c=>{const d=c.codePointAt(0); const ok=d<128;
+    return `<tr><td>${c===' '?'(space)':esc(c)}</td><td>${d}</td><td>${fmt(d,16)}</td><td>${ok?d.toString(2).padStart(8,'0'):'U+'+fmt(d,16).padStart(4,'0')+' (Unicode)'}</td></tr>`}).join('');
+  $('ascOut').innerHTML=`<table><tr><th>Char</th><th>Dec</th><th>Hex</th><th>Binary (8-bit)</th></tr>${rows}</table>`;
+}
+$('bcdIn').addEventListener('input',renderBCD); $('ascIn').addEventListener('input',renderASCII);
+
+/* ---------- practice ---------- */
+const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+const WORDS=['CAT','DOG','SUN','BYTE','CODE','DATA','LAN','BIT','WIFI','NODE','JAVA','HELLO'];
+const TYPES={
+  d2b:{label:'Decimal → binary', make(){const n=rnd(5,255);return{q:`${n}₁₀`,a:fmt(n,2),s:stepsDivision(n,2),ask:'Write it in binary'}}},
+  d2o:{label:'Decimal → octal', make(){const n=rnd(20,999);return{q:`${n}₁₀`,a:fmt(n,8),s:stepsDivision(n,8),ask:'Write it in octal'}}},
+  d2h:{label:'Decimal → hex', make(){const n=rnd(20,999);return{q:`${n}₁₀`,a:fmt(n,16),s:stepsDivision(n,16),ask:'Write it in hexadecimal'}}},
+  b2d:{label:'Binary → decimal', make(){const n=rnd(5,255),s=fmt(n,2);return{q:`${s}₂`,a:String(n),s:stepsWeights(s,2),ask:'Write it in decimal'}}},
+  o2d:{label:'Octal → decimal', make(){const n=rnd(20,511),s=fmt(n,8);return{q:`${s}₈`,a:String(n),s:stepsWeights(s,8),ask:'Write it in decimal'}}},
+  h2d:{label:'Hex → decimal', make(){const n=rnd(20,4095),s=fmt(n,16);return{q:`${s}₁₆`,a:String(n),s:stepsWeights(s,16),ask:'Write it in decimal'}}},
+  b2o:{label:'Binary → octal', make(){const n=rnd(20,4095),s=fmt(n,2);return{q:`${s}₂`,a:fmt(n,8),s:stepsGroup(s,8),ask:'Write it in octal'}}},
+  b2h:{label:'Binary → hex', make(){const n=rnd(20,4095),s=fmt(n,2);return{q:`${s}₂`,a:fmt(n,16),s:stepsGroup(s,16),ask:'Write it in hexadecimal'}}},
+  o2b:{label:'Octal → binary', make(){const n=rnd(8,511),s=fmt(n,8);return{q:`${s}₈`,a:fmt(n,2),s:stepsExpand(s,8),ask:'Write it in binary'}}},
+  h2b:{label:'Hex → binary', make(){const n=rnd(16,4095),s=fmt(n,16);return{q:`${s}₁₆`,a:fmt(n,2),s:stepsExpand(s,16),ask:'Write it in binary'}}},
+  o2h:{label:'Octal ↔ hex', make(){const n=rnd(64,4095); if(Math.random()<.5){const s=fmt(n,8);return{q:`${s}₈`,a:fmt(n,16),s:stepsVia(s,8,16),ask:'Write it in hexadecimal'}} const s=fmt(n,16);return{q:`${s}₁₆`,a:fmt(n,8),s:stepsVia(s,16,8),ask:'Write it in octal'}}},
+  bcd:{label:'Decimal → BCD', make(){const n=String(rnd(10,9999));return{q:`${n}₁₀`,a:bcdOf(n).join(''),bcd:true,s:stepsBCD(n),ask:'Write it in BCD (spaces optional)'}}},
+  asc:{label:'Word → ASCII', make(){const w=WORDS[rnd(0,WORDS.length-1)];return{q:`"${w}"`,a:[...w].map(c=>c.charCodeAt(0)).join(' '),asc:true,s:stepsASCII(w),ask:'Give the decimal ASCII codes, separated by spaces'}}},
+};
+let picked=new Set(['d2b','b2d','h2d','b2h']), cur=null, answered=false, ok=0, all=0, streak=0;
+$('pTypes').innerHTML=Object.entries(TYPES).map(([k,t])=>`<button type="button" class="chip" data-k="${k}" aria-pressed="${picked.has(k)}">${t.label}</button>`).join('');
+$('pTypes').addEventListener('click',e=>{const c=e.target.closest('.chip'); if(!c)return; const k=c.dataset.k;
+  if(picked.has(k)){ if(picked.size===1) return; picked.delete(k);} else picked.add(k);
+  c.setAttribute('aria-pressed',picked.has(k)); newQ();});
+function newQ(){
+  const ks=[...picked], k=ks[rnd(0,ks.length-1)]; cur=TYPES[k].make(); answered=false;
+  $('pLabel').textContent=TYPES[k].label+' · '+cur.ask; $('pQ').textContent=cur.q;
+  $('pIn').value=''; $('pFb').innerHTML=''; $('pSteps').innerHTML='';
+}
+const norm=s=>s.toUpperCase().replace(/\s+/g,'').replace(/^0+(?=.)/,'');
+function check(input){
+  if(cur.asc) return input.trim().split(/[^0-9]+/).filter(Boolean).map(Number).join(' ')===cur.a;
+  if(cur.bcd){ const v=input.replace(/\s+/g,''); return v===cur.a || v===cur.a.replace(/^0+(?=.)/,''); }
+  return norm(input)===norm(cur.a);
+}
+$('pForm').addEventListener('submit',e=>{e.preventDefault(); const v=$('pIn').value; if(!v.trim()){ $('pFb').innerHTML='<div class="fb bad">Type an answer first.</div>'; return; }
+  const right=check(v);
+  if(!answered){ all++; if(right){ok++;streak++;} else streak=0; answered=true;
+    $('pOk').textContent=ok; $('pAll').textContent=all; $('pStreak').textContent=streak; }
+  const shown = cur.bcd ? cur.a.match(/.{4}/g).join(' ') : cur.a;
+  $('pFb').innerHTML= right ? `<div class="fb good">Correct: ${esc(shown)}</div>` : `<div class="fb bad">Not quite. The answer is ${esc(shown)}. Check the working below.</div>`;
+  $('pSteps').innerHTML=cur.s;
+});
+$('pNext').addEventListener('click',()=>{newQ(); $('pIn').focus();});
+
+/* ---------- tutorial ---------- */
+const T=[
+ {t:'Convert the decimal numbers into binary, octal and hexadecimal.', items:['24','47','675','89'], kind:'d2all'},
+ {t:'Convert the binary numbers into decimal.', items:['110000111','110011','1001111','11000001'], f:2,to:10},
+ {t:'Convert the octal numbers into decimal.', items:['234','36','456','217'], f:8,to:10},
+ {t:'Convert the hexadecimal numbers into decimal.', items:['E16','389','2AB','FF'], f:16,to:10},
+ {t:'Convert the binary numbers into octal.', items:['1100011','110011001100','100111100','110000011','110011011'], f:2,to:8},
+ {t:'Convert the binary numbers into hexadecimal.', items:['11000011111','1100110011','100111100','1100000100','11001101110'], f:2,to:16},
+ {t:'Convert the octal numbers into binary.', items:['25','65','34','267'], f:8,to:2},
+ {t:'Convert the hexadecimal numbers into binary. (Part e is blank on the sheet.)', items:['A1','2AB','239','CCD'], f:16,to:2},
+ {t:'Write the decimal numbers in BCD. (The sheet says "BCD into binary"; the values are decimal, so encode each in BCD.)', items:['278','405','150','3284'], kind:'bcd'},
+ {t:'Convert the words into ASCII (A = 65).', items:['ABC','CAT','APPLE'], kind:'asc'},
+];
+const sub=b=>({2:'₂',8:'₈',10:'₁₀',16:'₁₆'}[b]);
+$('tutList').innerHTML=T.map((q,qi)=>{
+  const items=q.items.map((v,i)=>{
+    const L=String.fromCharCode(97+i); let ans, body;
+    if(q.kind==='d2all'){ const n=+v; ans=`${fmt(n,2)}₂ · ${fmt(n,8)}₈ · ${fmt(n,16)}₁₆`;
+      body=[2,8,16].map(b=>`<h3 style="margin-top:10px">To ${NAME[b].toLowerCase()}</h3>`+stepsDivision(n,b)).join(''); }
+    else if(q.kind==='bcd'){ ans=bcdOf(v).join(' '); body=stepsBCD(v); }
+    else if(q.kind==='asc'){ ans=[...v].map(c=>c.charCodeAt(0)).join(' '); body=stepsASCII(v); }
+    else { ans=fmt(parseInt(v,q.f),q.to)+sub(q.to); body=steps(v,q.f,q.to); }
+    const lbl = q.kind==='asc' ? `"${v}"` : v+sub(q.kind?10:q.f);
+    return `<details><summary><span>${L}) ${lbl}</span><span class="reveal">Show answer</span></summary><div class="body steps"><p class="ans">${ans}</p>${body}</div></details>`;
+  }).join('');
+  return `<div class="tq"><h3><span>Q${qi+1}</span>${q.t}</h3>${items}</div>`;
+}).join('');
+$('tutList').addEventListener('toggle',e=>{const s=e.target.querySelector('.reveal'); if(s) s.textContent=e.target.open?'Hide':'Show answer';},true);
+
+/* ---------- cheat ---------- */
+$('cheat16').innerHTML='<tr><th>Dec</th><th>Binary</th><th>Octal</th><th>Hex</th></tr>'+
+  Array.from({length:16},(_,n)=>`<tr><td>${n}</td><td>${n.toString(2).padStart(4,'0')}</td><td>${fmt(n,8)}</td><td>${fmt(n,16)}</td></tr>`).join('');
+
+/* ---------- routing ---------- */
+const VIEWS=['convert','codes','practice','tutorial','cheat'];
+function show(){ const v=VIEWS.includes(location.hash.slice(1))?location.hash.slice(1):'convert';
+  VIEWS.forEach(x=>{ $('v-'+x).hidden = x!==v; });
+  document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-selected', b.dataset.view===v)); }
+document.querySelector('nav').addEventListener('click',e=>{const b=e.target.closest('button'); if(b) location.hash=b.dataset.view;});
+window.addEventListener('hashchange',show);
+
+renderConvert(); renderBCD(); renderASCII(); newQ(); show();
+</script>
+
+</body></html>
